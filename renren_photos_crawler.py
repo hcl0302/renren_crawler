@@ -5,7 +5,12 @@ import os
 import re
 import ConfigParser
 import requests
+import sys
 from lxml import html
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 
 # 获取配置
 def get_config():
@@ -94,7 +99,7 @@ def get_imgs(album_url_dict, headers):
 
 def download_img(img_dict, album_url_dict, start_dir):
     for album_id, image_list in img_dict.iteritems():
-        cur_dir = start_dir + album_url_dict[album_id]['album_name'].replace(' ', '_')
+        cur_dir = start_dir + album_url_dict[album_id]['album_name'].replace(' ', '_').decode('unicode-escape')
         
         if not os.path.exists(cur_dir):
             os.makedirs(cur_dir)
