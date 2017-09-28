@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 人人相册爬虫
+# renren crawler
 
 import os
 import re
@@ -12,18 +12,18 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 
-# 获取配置
+# get configs
 def get_config():
     config = ConfigParser.RawConfigParser()
     config.read('config.ini')
 
     return config
 
-# 获取每个人得相册首地址
+# get everyone's album url
 def get_url(config):
     person_dict = {}
 
-    # 人人相册url前缀
+    # renren album url prefix
     url_prefix = 'http://photo.renren.com/photo/'
     rid_list = config.options('person')
     for rid in rid_list:
@@ -31,7 +31,7 @@ def get_url(config):
 
     return person_dict
             
-# 组装HTTP请求头
+# create http request header
 def get_headers(config):
     headers = {
         'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -47,30 +47,30 @@ def get_headers(config):
         'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.130 Safari/537.36',
     }
 
-    # 从配置文件中取得用户cookie
+    # get cookie from config
     headers['Cookie'] = config.get('cookie', 'cookie')
     
     return headers
 
-# 发送HTTP请求
+# send http request
 def request(url, headers):
     response = requests.get(url, headers=headers)
     return response
 
-# 获得相册列表
+# get album list
 def get_albums(response):
     parsed_body = html.fromstring(response.text)
     js = parsed_body.xpath('//script/text()')
     js = map(lambda x : x.encode('utf-8'), js)
     
-    # 相册代码所在的js段
+    # the js part with album code
     album_js = js[3]
     album_raw = re.findall(r"'albumList':\s*(\[.*?\]),", album_js)[0]
     album_list = eval(album_raw)
     
     album_url_dict = {}
     for album in album_list: 
-        if album['sourceControl'] == 99:  # 有权访问该相册（只能爬取有权访问的相册）
+        if album['sourceControl'] == 99:  # have permission to the album
             album_url = 'http://photo.renren.com/photo/'
             album_url = album_url + str(album['ownerId']) + '/'
             album_url = album_url + 'album-' + album['albumId'] + '/v7'
@@ -82,7 +82,7 @@ def get_albums(response):
 
     return album_url_dict
 
-# 获取每个相册中的图片列表
+# get image list in each album
 def get_imgs(album_url_dict, headers):
     img_dict = {}
 
@@ -113,20 +113,19 @@ def download_img(img_dict, album_url_dict, start_dir):
                 
             print url + "  done!"
 
-    
-# 主函数
+
 def main():
     config = get_config()
     headers = get_headers(config)
-    # 相册首地址
+    # get everyone's album main url
     url_dict = get_url(config)
     
     for rid, url in url_dict.iteritems():
         name = config.get('person', rid)
-        print 'start downloading' + ' ' + name + '\'s albums!'
+        print 'start downloading albums for: ' + name
         print '----------------------------------------'
-        # 为每个人创建一个单独的文件夹存储相册
-        start_dir = config.get('dir', 'start_dir') + name + '/'
+        # create a separate folder for each person
+        start_dir = config.get('dir', 'start_dir') + name + '/albums/'
         response = request(url, headers)
         album_url_dict = get_albums(response)
         img_dict = get_imgs(album_url_dict, headers)
@@ -135,6 +134,6 @@ def main():
         print 'end downloading!'
         print 
 
-# 程序入口
+# program entrance
 if __name__ == '__main__':
     main()
